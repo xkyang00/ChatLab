@@ -333,7 +333,10 @@ export function useAIChat(sessionId: string, timeFilter?: { startTs: number; end
 
       // 5. 保存对话到数据库
       console.log('[AI] === Step 5: 保存对话 ===')
-      await saveConversation(userMessage, aiMessage)
+      // 使用数组中的最新消息（流式更新后的内容）
+      const finalAiMessage = messages.value[aiMessageIndex]
+      console.log('[AI] 保存 AI 消息内容长度:', finalAiMessage.content.length)
+      await saveConversation(userMessage, finalAiMessage)
       console.log('[AI] 对话已保存')
       console.log('[AI] ====== 处理完成 ======')
     } catch (error) {
@@ -362,26 +365,40 @@ export function useAIChat(sessionId: string, timeFilter?: { startTs: number; end
    * 保存对话到数据库
    */
   async function saveConversation(userMsg: ChatMessage, aiMsg: ChatMessage): Promise<void> {
+    console.log('[AI] saveConversation 调用')
+    console.log('[AI] 用户消息内容长度:', userMsg.content?.length || 0)
+    console.log('[AI] AI消息内容长度:', aiMsg.content?.length || 0)
+    console.log('[AI] AI消息内容预览:', aiMsg.content?.slice(0, 100))
+
     try {
-      // 如果没有当前对话，创建新对话
+      // 如果没有当前对话，创建新对话（使用用户第一次提问作为标题）
       if (!currentConversationId.value) {
-        const conversation = await window.aiApi.createConversation(sessionId)
+        // 截取前 50 个字符作为标题
+        const title = userMsg.content.slice(0, 50) + (userMsg.content.length > 50 ? '...' : '')
+        const conversation = await window.aiApi.createConversation(sessionId, title)
         currentConversationId.value = conversation.id
+        console.log('[AI] 创建了新对话:', conversation.id)
       }
 
       // 保存用户消息
+      console.log('[AI] 保存用户消息...')
       await window.aiApi.addMessage(currentConversationId.value, 'user', userMsg.content)
 
-      // 保存 AI 消息
+      // 保存 AI 消息（需要将 Proxy 对象转为普通对象以便 IPC 序列化）
+      console.log('[AI] 保存 AI 消息...')
+      const keywords = aiMsg.dataSource?.keywords ? [...aiMsg.dataSource.keywords] : undefined
+      const messageCount = aiMsg.dataSource?.messageCount
+
       await window.aiApi.addMessage(
         currentConversationId.value,
         'assistant',
         aiMsg.content,
-        aiMsg.dataSource?.keywords,
-        aiMsg.dataSource?.messageCount
+        keywords,
+        messageCount
       )
+      console.log('[AI] 消息保存完成')
     } catch (error) {
-      console.error('保存对话失败：', error)
+      console.error('[AI] 保存对话失败：', error)
     }
   }
 
@@ -389,8 +406,17 @@ export function useAIChat(sessionId: string, timeFilter?: { startTs: number; end
    * 加载对话历史
    */
   async function loadConversation(conversationId: string): Promise<void> {
+    console.log('[AI] 加载对话历史，conversationId:', conversationId)
     try {
       const history = await window.aiApi.getMessages(conversationId)
+      console.log('[AI] 获取到的历史消息数量:', history.length)
+      console.log('[AI] 历史消息详情:', history.map(m => ({
+        id: m.id,
+        role: m.role,
+        contentLength: m.content?.length || 0,
+        content: m.content?.slice(0, 50) + '...'
+      })))
+
       currentConversationId.value = conversationId
 
       messages.value = history.map((msg) => ({
@@ -405,8 +431,9 @@ export function useAIChat(sessionId: string, timeFilter?: { startTs: number; end
             }
           : undefined,
       }))
+      console.log('[AI] 加载完成，messages.value 数量:', messages.value.length)
     } catch (error) {
-      console.error('加载对话历史失败：', error)
+      console.error('[AI] 加载对话历史失败：', error)
     }
   }
 

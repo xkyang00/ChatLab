@@ -113,7 +113,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex h-full w-48 flex-col rounded-xl bg-white shadow-sm dark:bg-gray-900">
+  <div class="flex h-full w-64 flex-col rounded-xl bg-white shadow-sm dark:bg-gray-900">
     <!-- 头部 -->
     <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
       <div class="flex items-center gap-2">

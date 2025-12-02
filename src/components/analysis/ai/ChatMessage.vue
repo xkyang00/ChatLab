@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import dayjs from 'dayjs'
 import MarkdownIt from 'markdown-it'
+import userAvatar from '@/assets/images/momo.png'
 
 // Props
 const props = defineProps<{
@@ -37,18 +38,14 @@ const renderedContent = computed(() => {
 <template>
   <div class="flex items-start gap-3" :class="[isUser ? 'flex-row-reverse' : '']">
     <!-- 头像 -->
+    <div v-if="isUser" class="h-8 w-8 shrink-0 overflow-hidden rounded-full">
+      <img :src="userAvatar" alt="用户头像" class="h-full w-full object-cover" />
+    </div>
     <div
-      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-      :class="[
-        isUser
-          ? 'bg-gradient-to-br from-blue-500 to-cyan-500'
-          : 'bg-gradient-to-br from-violet-500 to-purple-600',
-      ]"
+      v-else
+      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600"
     >
-      <UIcon
-        :name="isUser ? 'i-heroicons-user' : 'i-heroicons-sparkles'"
-        class="h-4 w-4 text-white"
-      />
+      <UIcon name="i-heroicons-sparkles" class="h-4 w-4 text-white" />
     </div>
 
     <!-- 消息内容 -->
